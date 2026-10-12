@@ -12,11 +12,13 @@ const D = preload("res://scripts/data/bb_data.gd")
 const PX := 0.01            # pixel della mappa -> unità del mondo
 const HMIN := -0.40
 const HMAX := 1.40
-const HSCALE := 0.45
+const HSCALE := 0.62
 const STEP := 8             # passo della griglia dei rilievi (pixel)
 const MESH_STEP := 2        # campioni per vertice del terreno
 const IMG_W := 1899
 const IMG_H := 2446
+const PIECE := 2.0          # scala dei blocchetti (rispetto all'esagono)
+const TOKEN := 1.6          # scala di mostri e segnalini
 
 var eng: BBEngine
 var maps_on: Array = []
@@ -59,6 +61,7 @@ var sel_ring: MeshInstance3D
 var sel_hex := -1
 var mat_cache := {}
 var counters := {}
+var towns := {}
 var atlas: Texture2D
 var block_mesh: BoxMesh
 var hero_mesh: BoxMesh
@@ -422,6 +425,9 @@ func _trees() -> void:
 # ================================================================== insediamenti, tane, miniere
 
 func _settlements() -> void:
+	var tf := FileAccess.open("res://data/towns.json", FileAccess.READ)
+	if tf != null:
+		towns = JSON.parse_string(tf.get_as_text())
 	var r := RandomNumberGenerator.new()
 	r.seed = 7
 	var body := BoxMesh.new()
@@ -454,6 +460,33 @@ func _settlements() -> void:
 		if s["n"] == "Spire of the Moon":
 			spire = h
 			n_h = 2
+		# case e torri ricalcate dall'illustrazione della mappa (data/towns.json)
+		var tw: Dictionary = towns.get(s["n"], {})
+		var drawn: bool = s["n"] != "Spire of the Moon" and (not tw.get("h", []).is_empty() or not tw.get("t", []).is_empty())
+		if drawn:
+			n_h = 0
+			var hc := hex_pos(h)
+			var wall := Color(0.93, 0.87, 0.72) if not s["fort"] else Color(0.86, 0.82, 0.74)
+			for e in tw.get("h", []):
+				var px := hc.x + float(e[0]) * PX
+				var pz := hc.z + float(e[1]) * PX
+				var y := height_at(px, pz)
+				var w := float(e[2]) * PX * 1.2
+				var hh := w * 0.8
+				var rcol := Color(float(e[3]), float(e[4]), float(e[5]))
+				rcol = Color.from_hsv(rcol.h, minf(1.0, rcol.s * 1.45), minf(1.0, rcol.v * 1.18))
+				var b := Basis().rotated(Vector3.UP, r.randf_range(-0.25, 0.25))
+				parts["body"].append([Transform3D(b.scaled(Vector3(w, hh, w * 0.8)), Vector3(px, y + hh / 2, pz)), wall.darkened(r.randf() * 0.12)])
+				parts["roof"].append([Transform3D(b.scaled(Vector3(w * 1.15, hh * 0.85, w * 0.88)), Vector3(px, y + hh + hh * 0.42, pz)), rcol])
+			for e in tw.get("t", []):
+				var px2 := hc.x + float(e[0]) * PX
+				var pz2 := hc.z + float(e[1]) * PX
+				var y2 := height_at(px2, pz2)
+				var rad := float(e[2]) * PX * 0.75
+				var th := float(e[3]) * PX * 0.75
+				var scol := Color(float(e[4]), float(e[5]), float(e[6])).lightened(0.1)
+				parts["tower"].append([Transform3D(Basis().scaled(Vector3(rad, th, rad)), Vector3(px2, y2 + th / 2, pz2)), scol])
+				parts["cap"].append([Transform3D(Basis().scaled(Vector3(rad * 1.1, rad * 1.1, rad * 1.1)), Vector3(px2, y2 + th + rad * 0.55, pz2)), Color("#7a3a2a") if s["city"] else Color("#3e4a5c")])
 		var rad := 0.26 if s["city"] else 0.16
 		for i in range(n_h):
 			var a := r.randf() * TAU
@@ -467,7 +500,7 @@ func _settlements() -> void:
 			var b := Basis().rotated(Vector3.UP, rot)
 			parts["body"].append([Transform3D(b.scaled(Vector3(w, hh, w * 0.8)), Vector3(px, y + hh / 2, pz)), Color(0.86, 0.80, 0.68).darkened(r.randf() * 0.2)])
 			parts["roof"].append([Transform3D(b.scaled(Vector3(w * 1.15, hh * 0.7, w * 0.85)), Vector3(px, y + hh + hh * 0.35, pz)), [Color("#8a3a26"), Color("#5a4636"), Color("#4b5560")][r.randi() % 3]])
-		if s["fort"] > 0 or s["city"]:
+		if (s["fort"] > 0 or s["city"]) and not drawn:
 			var nt := 4 if s["city"] else 1
 			for i in range(nt):
 				var a2 := TAU * i / nt + 0.4
@@ -990,7 +1023,7 @@ func _slot(h: int, slot: String) -> Vector3:
 	var off := Vector3.ZERO
 	match slot:
 		"army":
-			off = Vector3(0.0, 0, 0.2)
+			off = Vector3(0.0, 0, 0.36)
 		"hero":
 			off = Vector3(0.24, 0, 0.18)
 		"c":
@@ -1035,12 +1068,12 @@ func _stack_places() -> Dictionary:
 			var arm: Array = row.filter(func(x): return x["kind"] == "army")
 			var her: Array = row.filter(func(x): return x["kind"] != "army")
 			var n := arm.size() + her.size()
-			var z := 0.0 if owners.size() == 1 else (0.16 - 0.3 * oi)
+			var z := 0.0 if owners.size() == 1 else (0.1 - 0.42 * oi)
 			var i := 0
 			for u in arm + her:
-				var x := (i - (n - 1) / 2.0) * 0.29
+				var x := (i - (n - 1) / 2.0) * (0.58 if n <= 2 else 0.4)
 				var p := base + Vector3(x, 0, z)
-				p.y = maxf(_foot_h(p, 0.15), base.y)
+				p.y = maxf(_foot_h(p, 0.28), base.y)
 				out[int(u["id"])] = p
 				i += 1
 	return out
@@ -1063,7 +1096,7 @@ func refresh() -> void:
 		if b == null:
 			b = _make_block(u)
 			b.position = p + Vector3(0, 0.6, 0)
-			b.scale = Vector3(0.2, 0.2, 0.2)
+			b.scale = Vector3.ONE * 0.2 * PIECE
 			blocks[id] = b
 		elif b.get_meta("weak") != u["weak"] or b.get_meta("fin") != (u["fin"] and eng.owner(u) == eng.cur_k) or b.get_meta("own", -1) != eng.owner(u):
 			_style_block(b, u)
@@ -1088,6 +1121,7 @@ func refresh() -> void:
 			n = null
 		if n == null:
 			n = _make_monster(h)
+			n.scale = Vector3.ONE * TOKEN
 			n.position = _slot(h, "mon")
 			mon_nodes[h] = n
 	for h in mon_nodes.keys():
@@ -1114,6 +1148,7 @@ func refresh() -> void:
 		var parts: PackedStringArray = key.split(":")
 		var h2 := int(parts[1])
 		var n3 := _make_marker(parts[0], h2, int(want[key]))
+		n3.scale = Vector3.ONE * TOKEN
 		n3.position = _slot(h2, parts[0])
 		n3.set_meta("k", int(want[key]))
 		mark_nodes[key] = n3
@@ -1260,7 +1295,7 @@ func _process(delta: float) -> void:
 		var b: Node3D = blocks[id]
 		var p: Vector3 = b.get_meta("target", b.position)
 		b.position = b.position.lerp(p, 1.0 - exp(-delta * 7.0))
-		b.scale = b.scale.lerp(Vector3.ONE, 1.0 - exp(-delta * 8.0))
+		b.scale = b.scale.lerp(Vector3.ONE * PIECE, 1.0 - exp(-delta * 8.0))
 		var tilt := -0.42 if b.get_meta("weak", false) else 0.0
 		var fin_rot := 0.6 if b.get_meta("fin", false) else 0.0
 		b.rotation = Vector3(tilt, cy + fin_rot, 0)

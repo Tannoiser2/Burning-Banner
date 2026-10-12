@@ -25,7 +25,7 @@ func _run() -> void:
 	for i in range(30):
 		await process_frame
 	_save("board_all")
-	var h := BBData.hex_of("Fort Gorod") if c != 6 else BBData.hex_of("Placidia")
+	var h := BBData.hex_of("Spire of the Moon") if c == 1 else (BBData.hex_of("Fort Gorod") if c != 6 else BBData.hex_of("Placidia"))
 	b.want_dist = 6
 	b.want_pitch = 40
 	b.focus(h)

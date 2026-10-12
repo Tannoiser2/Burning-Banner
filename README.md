@@ -56,7 +56,8 @@ schede video modeste.
   segnalini glifo e runa.
 - **Mappa vera in 3D**: le quattro mappe del modulo in un quadrato 2×2, con il rilievo ricavato dalle
   immagini (montagne e colline in rilievo), foreste di alberi in volume, acqua animata, insediamenti con
-  case, torri e mura (le Città più grandi, i porti con pontile e barca, la Spira della Luna che brilla di
+  case e torri ricalcate dalle illustrazioni della mappa (posizione, grandezza e colore dei tetti presi dal
+  disegno, `tools/build_towns.py` → `data/towns.json`; le Città più grandi, i porti con pontile e barca, la Spira della Luna che brilla di
   viola), tane e miniere riconoscibili. Griglia esagonale presa dal `buildFile` del modulo e allineata
   alle immagini. Telecamera libera: trascina per spostarti, tasto destro per ruotare e inclinare, rotella
   per lo zoom, doppio clic per centrare un esagono; tastiera WASD/frecce, Q/E, R/F, C per ricentrare.
@@ -125,6 +126,7 @@ data/world.json              esagoni (terreno, mappa, coste, fiumi maggiori, tan
 data/cards.json              le 186 carte (incantesimi, tesori, benedizioni, eroi) con testo italiano e dati di gioco
 data/counters.json           indice dell'atlante dei segnalini
 data/height_*.bin, trees.bin rilievo delle quattro mappe e posizioni degli alberi (ricavati dalle immagini)
+data/towns.json              case e torri di ogni insediamento ricalcate dai disegni (tools/build_towns.py)
 scripts/data/bb_data.gd      regni, armate, eroi, mostri, tabella delle rivolte, campagne, caricamento dei dati
 scripts/core/engine.gd       motore delle regole (nessuna dipendenza dalla grafica)
 scripts/core/magic.gd        carte, poteri degli eroi e finestre di reazione
