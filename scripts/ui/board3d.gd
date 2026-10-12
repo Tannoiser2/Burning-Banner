@@ -1,7 +1,7 @@
 class_name Board3D
 extends Node3D
 ## La mappa in 3D: terreno in rilievo (dalle immagini delle mappe), acqua animata, boschi,
-## insediamenti, tane e miniere; le unità sono blocchetti di legno col colore del regno e la figura
+## insediamenti, tane e miniere; le unità sono pedine di cartoncino col bordo del colore del regno e la figura
 ## della pedina sulla faccia; i segnalini di controllo, raso al suolo e Congrega sono pedine.
 ## Telecamera libera: ruota, inclina, zoom, sposta; doppio clic centra un esagono.
 
@@ -17,7 +17,7 @@ const STEP := 8             # passo della griglia dei rilievi (pixel)
 const MESH_STEP := 2        # campioni per vertice del terreno
 const IMG_W := 1899
 const IMG_H := 2446
-const PIECE := 2.0          # scala dei blocchetti (rispetto all'esagono)
+const PIECE := 2.0          # scala delle pedine (rispetto all'esagono)
 const TOKEN := 1.6          # scala di mostri e segnalini
 
 var eng: BBEngine
@@ -824,6 +824,12 @@ func _face_mat(key: String, dimmed := false) -> StandardMaterial3D:
 	m.roughness = 0.8
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	m.alpha_scissor_threshold = 0.4
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# un po' di luce propria: la faccia stampata si legge anche in ombra
+	m.emission_enabled = true
+	m.emission_texture = atlas
+	m.emission = Color(1, 1, 1)
+	m.emission_energy_multiplier = 0.05 if dimmed else 0.15
 	if dimmed:
 		m.albedo_color = Color(0.55, 0.55, 0.55)
 	rows = rows
@@ -856,36 +862,69 @@ func _unit_key(u: Dictionary) -> String:
 	return u["t"]
 
 
+## Pedina di cartoncino: quadrato con gli angoli arrotondati, spessa qualche millimetro.
+## Superficie 0: la faccia stampata (UV 0..1 sul quadrato); superficie 1: bordi e retro.
+func _counter_mesh(side: float, thick: float, rad: float) -> ArrayMesh:
+	var key := "cm%.3f/%.3f" % [side, thick]
+	if mat_cache.has(key):
+		return mat_cache[key]
+	var outline := PackedVector2Array()
+	var hs := side / 2.0 - rad
+	var corners := [Vector2(hs, hs), Vector2(-hs, hs), Vector2(-hs, -hs), Vector2(hs, -hs)]
+	for ci in range(4):
+		for j in range(6):
+			var a := (ci + j / 5.0) * PI / 2.0
+			outline.append(corners[ci] + Vector2(cos(a), sin(a)) * rad)
+	var n := outline.size()
+	var mesh := ArrayMesh.new()
+	# faccia
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(n):
+		var p0 := outline[i]
+		var p1 := outline[(i + 1) % n]
+		for q in [Vector2.ZERO, p1, p0]:
+			st.set_normal(Vector3.UP)
+			st.set_uv(Vector2(q.x / side + 0.5, q.y / side + 0.5))
+			st.add_vertex(Vector3(q.x, thick, q.y))
+	st.commit(mesh)
+	# bordi e retro
+	var sb := SurfaceTool.new()
+	sb.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in range(n):
+		var p0 := outline[i]
+		var p1 := outline[(i + 1) % n]
+		var nm := Vector3(p0.x + p1.x, 0, p0.y + p1.y).normalized()
+		for v in [Vector3(p0.x, 0, p0.y), Vector3(p1.x, 0, p1.y), Vector3(p1.x, thick, p1.y), Vector3(p0.x, 0, p0.y), Vector3(p1.x, thick, p1.y), Vector3(p0.x, thick, p0.y)]:
+			sb.set_normal(nm)
+			sb.add_vertex(v)
+		for q in [Vector2.ZERO, p0, p1]:
+			sb.set_normal(Vector3.DOWN)
+			sb.add_vertex(Vector3(q.x, 0, q.y))
+	sb.commit(mesh)
+	mat_cache[key] = mesh
+	return mesh
+
+
+func _edge_mat(col: Color) -> StandardMaterial3D:
+	var ck := "e" + col.to_html()
+	if mat_cache.has(ck):
+		return mat_cache[ck]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = col
+	m.roughness = 0.85
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_cache[ck] = m
+	return m
+
+
 func _make_block(u: Dictionary) -> Node3D:
 	var root := Node3D.new()
-	var k := int(u["k"])
-	var col: Color = D.KINGDOMS[k]["col"]
 	var hero: bool = u["kind"] != "army"
-	var body := MeshInstance3D.new()
-	body.mesh = hero_mesh if hero else block_mesh
-	body.name = "Body"
-	var sz: Vector3 = (hero_mesh if hero else block_mesh).size
-	body.position = Vector3(0, sz.y / 2, 0)
-	root.add_child(body)
-	var face := MeshInstance3D.new()
-	face.mesh = hero_face if hero else face_mesh
-	face.name = "Face"
-	face.position = Vector3(0, sz.y / 2 + (0.05 if hero else 0.0), sz.z / 2 + 0.002)
-	root.add_child(face)
-	var back := MeshInstance3D.new()
-	back.mesh = hero_face if hero else face_mesh
-	back.name = "Back"
-	back.position = Vector3(0, sz.y / 2 + (0.05 if hero else 0.0), -sz.z / 2 - 0.002)
-	back.rotation_degrees = Vector3(0, 180, 0)
-	root.add_child(back)
-	if hero:
-		var crown := MeshInstance3D.new()
-		var cm := PrismMesh.new()
-		cm.size = Vector3(0.2, 0.06, 0.085)
-		crown.mesh = cm
-		crown.position = Vector3(0, sz.y + 0.035, 0)
-		crown.name = "Crown"
-		root.add_child(crown)
+	var c := MeshInstance3D.new()
+	c.mesh = _counter_mesh(0.215 if hero else 0.25, 0.034, 0.028)
+	c.name = "Counter"
+	root.add_child(c)
 	root.set_meta("hero", hero)
 	add_child(root)
 	_style_block(root, u)
@@ -893,22 +932,15 @@ func _make_block(u: Dictionary) -> Node3D:
 
 
 func _style_block(root: Node3D, u: Dictionary) -> void:
-	var k := int(u["k"])
 	var own: int = eng.owner(u)
 	var col: Color = D.KINGDOMS[own]["col"]
 	var fin: bool = u["fin"] and own == eng.cur_k
-	var body: MeshInstance3D = root.get_node("Body")
-	body.material_override = _wood_mat(col, fin)
-	var key := _unit_key(u)
-	(root.get_node("Face") as MeshInstance3D).material_override = _face_mat(key, fin)
-	(root.get_node("Back") as MeshInstance3D).material_override = _face_mat(D.KINGDOMS[k]["hero_back"] if root.get_meta("hero") else key, true)
-	if root.has_node("Crown"):
-		var cr: MeshInstance3D = root.get_node("Crown")
-		var gm := StandardMaterial3D.new()
-		gm.albedo_color = Color("#d9b45a") if u["kind"] == "hero" else Color("#7a2a9a")
-		gm.metallic = 0.6
-		gm.roughness = 0.35
-		cr.material_override = gm
+	var c: MeshInstance3D = root.get_node("Counter")
+	c.set_surface_override_material(0, _face_mat(_unit_key(u), fin))
+	var edge: Color = Color("#d9b45a") if root.get_meta("hero") else col.darkened(0.25)
+	if fin:
+		edge = edge.darkened(0.4)
+	c.set_surface_override_material(1, _edge_mat(edge))
 	root.set_meta("weak", u["weak"])
 	root.set_meta("fin", fin)
 
@@ -916,31 +948,18 @@ func _style_block(root: Node3D, u: Dictionary) -> void:
 func _make_monster(h: int) -> Node3D:
 	var m: Dictionary = eng.monsters[h]
 	var root := Node3D.new()
-	var base := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = 0.2
-	cm.bottom_radius = 0.22
-	cm.height = 0.12
-	cm.radial_segments = 6
-	cm.rings = 1
-	base.mesh = cm
-	base.position = Vector3(0, 0.06, 0)
-	var bm := StandardMaterial3D.new()
-	bm.albedo_color = Color("#3a3530") if not m["def"] else Color("#1c1a18")
-	base.material_override = bm
-	root.add_child(base)
 	var plate := MeshInstance3D.new()
-	plate.mesh = face_mesh
+	plate.mesh = _counter_mesh(0.25, 0.034, 0.028)
 	plate.name = "Face"
-	plate.position = Vector3(0, 0.3, 0)
 	var key: String = m["m"] if not m["def"] else ("m_sea" if D.monster(m["m"]).get("sea", false) else "m_land")
-	plate.material_override = _face_mat(key, m["def"])
+	plate.set_surface_override_material(0, _face_mat(key, m["def"]))
+	plate.set_surface_override_material(1, _edge_mat(Color("#2a2622")))
 	root.add_child(plate)
 	if int(m["cmd"]) >= 0:
 		var ring := MeshInstance3D.new()
 		var tm := TorusMesh.new()
-		tm.inner_radius = 0.2
-		tm.outer_radius = 0.24
+		tm.inner_radius = 0.19
+		tm.outer_radius = 0.215
 		ring.mesh = tm
 		var rm := StandardMaterial3D.new()
 		rm.albedo_color = D.KINGDOMS[int(m["cmd"])]["light"]
@@ -948,7 +967,7 @@ func _make_monster(h: int) -> Node3D:
 		rm.emission = D.KINGDOMS[int(m["cmd"])]["light"]
 		rm.emission_energy_multiplier = 0.5
 		ring.material_override = rm
-		ring.position = Vector3(0, 0.13, 0)
+		ring.position = Vector3(0, 0.012, 0)
 		root.add_child(ring)
 	root.set_meta("mon", m["m"] + str(m["def"]) + str(m["cmd"]))
 	add_child(root)
@@ -1009,6 +1028,15 @@ func _make_marker(kind: String, h: int, k: int) -> Node3D:
 	return root
 
 
+## Rialzo delle pedine dove il terreno o gli alberi potrebbero nasconderle.
+func _lift(h: int) -> float:
+	if eng.is_mountain(h):
+		return 0.12
+	if eng.is_forest(h):
+		return 0.16
+	return 0.01
+
+
 ## Altezza massima del terreno sotto l'impronta di un pezzo (così non affonda nei pendii).
 func _foot_h(p: Vector3, r: float) -> float:
 	var y := maxf(height_at(p.x, p.z), 0.0)
@@ -1041,7 +1069,7 @@ func _slot(h: int, slot: String) -> Vector3:
 	return p
 
 
-## Posizione di ogni blocchetto: le armate dello stesso regno in fila, gli eroi a lato;
+## Posizione di ogni pedina: le armate dello stesso regno in fila, gli eroi a lato;
 ## con due regni nello stesso esagono (assedio) chi controlla l'insediamento sta dietro.
 func _stack_places() -> Dictionary:
 	var by_hex := {}
@@ -1073,13 +1101,13 @@ func _stack_places() -> Dictionary:
 			for u in arm + her:
 				var x := (i - (n - 1) / 2.0) * (0.58 if n <= 2 else 0.4)
 				var p := base + Vector3(x, 0, z)
-				p.y = maxf(_foot_h(p, 0.28), base.y)
+				p.y = maxf(_foot_h(p, 0.3), base.y) + _lift(h)
 				out[int(u["id"])] = p
 				i += 1
 	return out
 
 
-## Sincronizza blocchetti e segnalini con lo stato del motore.
+## Sincronizza pedine e segnalini con lo stato del motore.
 func refresh() -> void:
 	if eng == null:
 		return
@@ -1122,7 +1150,7 @@ func refresh() -> void:
 		if n == null:
 			n = _make_monster(h)
 			n.scale = Vector3.ONE * TOKEN
-			n.position = _slot(h, "mon")
+			n.position = _slot(h, "mon") + Vector3(0, _lift(h), 0)
 			mon_nodes[h] = n
 	for h in mon_nodes.keys():
 		if not mseen.has(h):
@@ -1289,16 +1317,15 @@ func _process(delta: float) -> void:
 			want_pitch = clampf(want_pitch - 40 * delta, 18, 86)
 	if kb != Vector3.ZERO:
 		_pan_world(kb.normalized() * dist * 0.9 * delta)
-	# blocchetti: scivolano verso la loro posizione e guardano verso la telecamera
+	# pedine: scivolano verso la loro posizione e si girano verso la telecamera
 	var cy := deg_to_rad(yaw)
 	for id in blocks:
 		var b: Node3D = blocks[id]
 		var p: Vector3 = b.get_meta("target", b.position)
 		b.position = b.position.lerp(p, 1.0 - exp(-delta * 7.0))
 		b.scale = b.scale.lerp(Vector3.ONE * PIECE, 1.0 - exp(-delta * 8.0))
-		var tilt := -0.42 if b.get_meta("weak", false) else 0.0
-		var fin_rot := 0.6 if b.get_meta("fin", false) else 0.0
-		b.rotation = Vector3(tilt, cy + fin_rot, 0)
+		var fin_rot := 0.35 if b.get_meta("fin", false) else 0.0
+		b.rotation = Vector3(0, cy + fin_rot, 0)
 	for h in mon_nodes:
 		var n: Node3D = mon_nodes[h]
 		var f: Node3D = n.get_node_or_null("Face")

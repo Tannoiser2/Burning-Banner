@@ -9,6 +9,7 @@ e dalle carte tradotte in italiano, e non vanno distribuite pubblicamente.
 ![Menu](docs/menu.jpg)
 ![Le quattro mappe in 3D](docs/mappa.jpg)
 ![Il turno di Fjordland](docs/turno.jpg)
+![Una pedina di cartoncino a Placidia](docs/pedina.jpg)
 ![Un combattimento](docs/combattimento.jpg)
 ![Fine della partita](docs/fine.jpg)
 
@@ -61,12 +62,14 @@ schede video modeste.
   viola), tane e miniere riconoscibili. Griglia esagonale presa dal `buildFile` del modulo e allineata
   alle immagini. Telecamera libera: trascina per spostarti, tasto destro per ruotare e inclinare, rotella
   per lo zoom, doppio clic per centrare un esagono; tastiera WASD/frecce, Q/E, R/F, C per ricentrare.
-- **Blocchetti di legno**: ogni unità è un blocchetto del colore del regno con la figura del segnalino
-  sulla faccia; un'armata indebolita è inclinata all'indietro e mostra il lato debole, le unità esauste
-  sono più scure e ruotate. Gli eroi sono blocchetti più alti e stretti con la corona, i mostri pedine
-  esagonali con l'anello del regno che li comanda. Le pile si leggono affiancate; in un assedio chi
-  difende sta dietro. Segnalini di controllo, Congreghe e rovine fumanti sono pedine 3D; la bandierina
-  di ogni insediamento prende il colore di chi lo controlla.
+- **Pedine di cartoncino**: ogni unità è una pedina quadrata di qualche millimetro, con gli angoli
+  arrotondati, stesa sulla mappa con la figura del segnalino sulla faccia e il bordo del colore del regno;
+  un'armata indebolita mostra il lato debole, le unità esauste sono più scure e un po' ruotate. Gli eroi
+  hanno pedine più piccole con il bordo dorato, i mostri pedine scure con l'anello del regno che li
+  comanda. Su montagne e foreste le pedine stanno un po' più in alto, per non sparire nel rilievo e fra
+  gli alberi. Le pile si leggono affiancate; in un assedio chi difende sta dietro. Segnalini di controllo,
+  Congreghe e rovine fumanti sono pedine 3D; la bandierina di ogni insediamento prende il colore di chi
+  lo controlla.
 - **Interfaccia** sopra la mappa: fascia sempre visibile con stagione, anno, turni rimasti, regno di
   turno, oro, rendita, rivolte e Congreghe di ogni regno e punti di ciascuno schieramento (passa il mouse
   per il dettaglio); **plancia del regno** con riserva, unità in mappa, eroi in gioco e mostri comandati
@@ -132,7 +135,7 @@ scripts/core/engine.gd       motore delle regole (nessuna dipendenza dalla grafi
 scripts/core/magic.gd        carte, poteri degli eroi e finestre di reazione
 scripts/core/ai.gd           IA (tre livelli)
 scripts/net/                 Firebase (REST) e partita online in lockstep
-scripts/ui/board3d.gd        mappa 3D: terreno, acqua, alberi, insediamenti, blocchetti, telecamera
+scripts/ui/board3d.gd        mappa 3D: terreno, acqua, alberi, insediamenti, pedine, telecamera
 scripts/ui/                  menu, vista di gioco, regole in breve
 assets/shaders/              terreno (griglia ed evidenziazioni calcolate sul rilievo) e acqua
 tests/sim.gd                 godot --headless -s res://tests/sim.gd -- 20 1 2 1 1   (partite IA: partite, campagna, livello Invasori, livello Resistenza, avanzate)
