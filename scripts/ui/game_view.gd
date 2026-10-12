@@ -1484,7 +1484,7 @@ func _on_game_end(res: Dictionary) -> void:
 	var w := int(res["winner"])
 	var vb := _open_modal("FINE DELLA PARTITA", 1180)
 	var col := Color("#ff8a70") if w == 0 else Color("#8ac0f0")
-	vb.add_child(UI.title("VINCONO %s" % (D.SIDE_NAMES[w].to_upper() if w >= 0 else "NESSUNO"), 44, col))
+	vb.add_child(UI.title(["VINCONO GLI INVASORI", "VINCE LA RESISTENZA"][w] if w >= 0 else "NESSUN VINCITORE", 44, col))
 	var ks: Array = []
 	for k in engine.side:
 		if int(engine.side[k]) == w:

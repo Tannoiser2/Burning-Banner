@@ -6,8 +6,11 @@ e dalle carte tradotte in italiano, e non vanno distribuite pubblicamente.
 
 **Gioca nel browser:** https://tannoiser2.github.io/Burning-Banner/
 
-![Menu](docs/menu.png)
-![Mappa in 3D](docs/mappa.png)
+![Menu](docs/menu.jpg)
+![Le quattro mappe in 3D](docs/mappa.jpg)
+![Il turno di Fjordland](docs/turno.jpg)
+![Un combattimento](docs/combattimento.jpg)
+![Fine della partita](docs/fine.jpg)
 
 ## Avvio
 1. Apri Godot 4 (testato su 4.7) → *Importa* → seleziona `project.godot`.
@@ -140,6 +143,15 @@ tests/chk.gd                 controllo di compilazione di tutti gli script
 Le texture delle mappe e dell'atlante dei segnalini sono importate in **Basis Universal** (si
 trasformano al caricamento nel formato compresso supportato dalla scheda video, anche su telefono), le
 carte in WebP con perdita.
+
+## Verifiche fatte
+- Tutte le campagne giocate da IA contro IA, con regole base e avanzate, senza errori (`tests/sim.gd`).
+- Partite intere giocate dall'interfaccia con gli screenshot di menu, mappa, combattimento e fine partita
+  (`tests/shot.gd` con xvfb), controllati a occhio.
+- Online sul finto Firebase: due dispositivi arrivano alla stessa impronta finale, ognuno vede solo le sue
+  carte, e l'ospite che esce a metà partita rientra e la finisce allineato (`tests/online_play.gd`).
+- Versione web esportata e aperta in Chromium con WebGL 2: menu e partita senza errori nella console
+  (`tests/web_test.py`).
 
 ## Equilibrio e IA
 Risultati di partite IA contro IA con le regole avanzate (`tests/sim.gd`, 12 partite per riga, stessi semi
