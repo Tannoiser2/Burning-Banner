@@ -9,7 +9,7 @@ e dalle carte tradotte in italiano, e non vanno distribuite pubblicamente.
 ![Menu](docs/menu.jpg)
 ![Le quattro mappe in 3D](docs/mappa.jpg)
 ![Il turno di Fjordland](docs/turno.jpg)
-![Una pedina di cartoncino a Placidia](docs/pedina.jpg)
+![Pedine di cartoncino attorno alla Spira della Luna](docs/pedina.jpg)
 ![Un combattimento](docs/combattimento.jpg)
 ![Fine della partita](docs/fine.jpg)
 
@@ -145,8 +145,8 @@ tests/web_test.py            prova della versione web nel browser (Playwright): 
 tests/chk.gd                 controllo di compilazione di tutti gli script
 ```
 
-Le texture delle mappe e dell'atlante dei segnalini sono importate in **Basis Universal** (si
-trasformano al caricamento nel formato compresso supportato dalla scheda video, anche su telefono), le
+Le texture delle mappe sono importate in **Basis Universal** (si
+trasformano al caricamento nel formato compresso supportato dalla scheda video, anche su telefono); l'atlante dei segnalini resta senza perdita per non sbiadire le pedine; le
 carte in WebP con perdita.
 
 ## Verifiche fatte

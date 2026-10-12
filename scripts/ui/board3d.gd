@@ -237,8 +237,8 @@ func _env() -> void:
 	env.background_color = Color("#16110c")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("#a89c88")
-	env.ambient_light_energy = 0.5
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.ambient_light_energy = 0.48
+	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.fog_enabled = true
 	env.fog_light_color = Color("#2a2219")
 	env.fog_density = 0.004
@@ -246,7 +246,7 @@ func _env() -> void:
 	add_child(we)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-52, -38, 0)
-	sun.light_energy = 0.92
+	sun.light_energy = 0.9
 	sun.light_color = Color("#fff1d8")
 	sun.shadow_enabled = true
 	sun.shadow_bias = 0.04
@@ -822,16 +822,13 @@ func _face_mat(key: String, dimmed := false) -> StandardMaterial3D:
 	m.uv1_scale = Vector3(cell / tw, cell / th, 1)
 	m.uv1_offset = Vector3((idx % cols) * cell / tw, (idx / cols) * cell / th, 0)
 	m.roughness = 0.8
+	# la faccia stampata non prende ombre né sfumature: i colori restano quelli del segnalino
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	m.alpha_scissor_threshold = 0.4
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	# un po' di luce propria: la faccia stampata si legge anche in ombra
-	m.emission_enabled = true
-	m.emission_texture = atlas
-	m.emission = Color(1, 1, 1)
-	m.emission_energy_multiplier = 0.05 if dimmed else 0.15
 	if dimmed:
-		m.albedo_color = Color(0.55, 0.55, 0.55)
+		m.albedo_color = Color(0.72, 0.72, 0.72)
 	rows = rows
 	mat_cache[ck] = m
 	return m
